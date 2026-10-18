@@ -56,10 +56,33 @@ Après activation de l’environnement virtuel et installation des dépendances 
 python -m streamlit run dashboards/app.py
 ```
 
+### API FastAPI (migration progressive)
+
+L’API et Streamlit sont deux processus indépendants. Depuis la racine du projet,
+l’API démarre avec :
+
+```powershell
+python -m uvicorn backend.app.main:app --reload
+```
+
+La documentation interactive est disponible sur `http://127.0.0.1:8000/docs`.
+Les options de filtres sont exposées par `GET /api/v1/filters/options`, et les
+KPI de la vue d’ensemble par `GET /api/v1/overview`. Les filtres catégoriels
+utilisent des paramètres répétés, par exemple
+`/api/v1/overview?academic_years=2024%2F2025&stage_types=PFE`. Les paramètres
+`include_missing_year`, `include_missing_type` et `include_missing_nature`
+permettent d’inclure explicitement les valeurs absentes ; si un seul de ces
+paramètres est fourni à `true` sans valeur de catégorie, seules les lignes
+manquantes de ce champ sont sélectionnées. Un paramètre catégoriel omis avec
+son booléen omis est sans restriction ; fournir le booléen à `false` sans
+valeur sélectionnée produit un résultat vide. L’API ne retourne ni ligne source
+ni identifiant individuel.
+
 Pour lancer les tests :
 
 ```powershell
 python -m unittest discover -s tests -v
+python -m pytest tests/test_api_v1.py -v
 ```
 
 Consultez [`docs/audit_bi.md`](docs/audit_bi.md), [`docs/cahier_fonctionnel_bi.md`](docs/cahier_fonctionnel_bi.md), [`docs/validation_bi_v2.md`](docs/validation_bi_v2.md) et [`docs/geographie_stages.md`](docs/geographie_stages.md) pour les limites, les validations et les décisions métier encore en attente.
