@@ -1,0 +1,40 @@
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Python compilé et caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Configuration locale et secrets
+.env
+.env.*
+!.env.example
+
+# Fichiers temporaires et sorties locales
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Données sources : ne jamais versionner les fichiers réels
+data/raw/**
+!data/raw/.gitkeep
+
+# Données intermédiaires ou préparées générées localement
+data/interim/**
+!data/interim/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+
+# Sorties locales d'outils et de tableaux de bord
+outputs/
+reports/
