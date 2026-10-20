@@ -14,6 +14,7 @@ from bi.ingestion import validate_columns
 
 
 CONVENTION_COLUMN = "n_convention_de_stage"
+COMPANY_COLUMN = "entreprise"
 CITY_COLUMN = "ville_lieu_stage"
 COUNTRY_COLUMN = "pays_lieu_stage"
 REFERENCE_COLUMNS = (
@@ -284,14 +285,27 @@ def aggregate_geography(
         raise ValueError("Les coordonnées de référence de l'école sont invalides.")
     checked_reference = validate_geographic_reference(reference)
     reference_by_id = checked_reference.set_index("destination_id")
-    source = data.loc[:, [CONVENTION_COLUMN, CITY_COLUMN, COUNTRY_COLUMN]]
+    source_columns = [CONVENTION_COLUMN, CITY_COLUMN, COUNTRY_COLUMN]
+    if COMPANY_COLUMN in data.columns:
+        source_columns.append(COMPANY_COLUMN)
+    source = data.loc[:, source_columns].copy()
+    if COMPANY_COLUMN not in source.columns:
+        source[COMPANY_COLUMN] = None
 
     convention_destinations: dict[object, set[str]] = {}
     convention_country_values: dict[object, set[str]] = {}
+    companies_by_convention: dict[object, set[str]] = {}
     source_labels: dict[str, tuple[str, str | None]] = {}
-    for convention, city, country in source.itertuples(index=False, name=None):
+    for convention, city, country, company in source.itertuples(
+        index=False, name=None
+    ):
         if pd.isna(convention):
             continue
+        normalized_company = _normalized_text(company)
+        if normalized_company is not None:
+            companies_by_convention.setdefault(convention, set()).add(
+                normalized_company
+            )
         normalized_city = _normalized_text(city)
         normalized_country = _normalized_text(country)
         if normalized_country is not None:
@@ -364,6 +378,16 @@ def aggregate_geography(
         if distance is None or not math.isfinite(distance):
             continue
         city, country = source_labels[identifier]
+        convention_details = [
+            {
+                "convention_id": str(convention),
+                "companies": sorted(
+                    companies_by_convention.get(convention, set()),
+                    key=str.casefold,
+                ),
+            }
+            for convention in sorted(conventions, key=str)
+        ]
         destination_rows.append(
             {
                 "destination_id": identifier,
@@ -384,6 +408,7 @@ def aggregate_geography(
                     if "stage_ids" in reference_by_id.columns
                     else []
                 ),
+                "conventions": convention_details,
             }
         )
     destinations = pd.DataFrame(
@@ -399,6 +424,7 @@ def aggregate_geography(
             "distance_band",
             "companies",
             "stage_ids",
+            "conventions",
         ),
     )
 

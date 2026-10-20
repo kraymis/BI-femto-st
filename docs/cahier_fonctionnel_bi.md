@@ -406,7 +406,7 @@ Le projet déclare actuellement `pandas` et `openpyxl`. Streamlit n’est pas d�
 | AC-06 | Chaque pourcentage expose son dénominateur et permet d’identifier la part de données manquantes. |
 | AC-07 | Les années académiques incomplètes ou non comparables sont annotées ; elles ne sont pas mises en comparaison silencieuse avec une année close. |
 | AC-08 | Les KPI de durée restent masqués ou marqués « à valider » avant adoption d’une définition métier écrite. |
-| AC-09 | Les vues et exports ne contiennent aucun nom/prénom, identifiant étudiant, e-mail, adresse ou détail individuel de stage. |
+| AC-09 | Les vues et exports n’exposent aucun identifiant étudiant, e-mail, adresse ou description individuelle de stage. Les popups géographiques peuvent afficher les numéros de convention et libellés `entreprise` associés à une destination publiée ; l’API doit rester sur un réseau de confiance tant qu’elle n’est pas authentifiée. |
 | AC-10 | Les petits effectifs et croisements sont bloqués ou protégés selon le seuil approuvé ; sans seuil, l’export détaillé n’est pas activé. |
 | AC-11 | Aucune opération de nettoyage, déduplication ou écriture n’est appliquée au classeur brut par l’application. |
 | AC-12 | Une sélection sans résultat affiche un état vide explicite et ne laisse pas visibles des résultats obsolètes. |
@@ -473,4 +473,3 @@ Après validation des champs et de la confidentialité :
 9. **Évaluer les extensions** selon leur valeur de pilotage et les contraintes de déploiement, sans élargir le périmètre à du NLP/RAG.
 
 **État à ce jour :** ce cahier fonctionnel est un livrable de cadrage. Le dashboard n’a pas été développé, aucune dépendance n’a été modifiée et aucun traitement du classeur n’a été exécuté dans le cadre de cette étape.
-

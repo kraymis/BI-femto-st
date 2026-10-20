@@ -4,12 +4,15 @@ Cette partie du projet de fin d’études « Système d’information intelligen
 
 ## Objectifs de la partie BI
 
-La V2 comprend cinq pages : Vue d’ensemble, Analyse temporelle, Analyse des stages, Entreprises et géographie, et Qualité des données. Elle présente des indicateurs agrégés et ne publie ni KPI de durée non validé ni comparaison de périodes. Elle n’affiche aucune ligne individuelle et ne modifie pas le classeur source. Les exports restent désactivés tant que la politique de confidentialité des petits effectifs n’est pas validée.
+Le dashboard comprend cinq pages : Vue d’ensemble, Analyse temporelle, Analyse des stages, Entreprises et géographie, et Qualité des données. L’interface React consomme les agrégats calculés par FastAPI ; Streamlit reste disponible comme référence fonctionnelle pendant la migration. Les deux applications lisent les mêmes données et ne les modifient pas.
+
+Les KPI continuent de compter les conventions distinctes, sans les assimiler à un nombre de stages validé. Les réponses ne renvoient pas de lignes brutes ni d’identifiants étudiants. Les popups de la carte affichent toutefois les numéros de convention associés à chaque destination et, lorsque renseigné, le champ `entreprise` correspondant. L’API ne dispose pas d’authentification : ne l’exposez pas à un réseau non autorisé. Les détails géographiques respectent le seuil configuré dans `src/bi/config.py`.
 
 ## Prérequis
 
 - Python 3.10 ou ultérieur.
 - `pip`, fourni avec les installations Python usuelles.
+- Node.js `^20.19.0` ou `>=22.12.0` et npm pour le frontend React.
 
 ## Installation
 
@@ -43,46 +46,76 @@ python -m pip install -r requirements.txt
 - `notebooks/` : futurs travaux exploratoires et expérimentations.
 - `src/bi/` : package Python de la partie BI, organisé par responsabilité.
 - `dashboards/` : interface Streamlit.
+- `backend/app/` : routes FastAPI, schémas Pydantic et orchestration des agrégats existants.
+- `frontend/` : application React + TypeScript construite avec Vite.
 - `tests/` : tests synthétiques des fonctions analytiques et d’ingestion.
 - `docs/` : documentation technique et décisions d’architecture.
 
-Le détail des modules figure dans [`docs/architecture.md`](docs/architecture.md). Les chemins applicatifs sont définis dans `src/bi/config.py` relativement à l’emplacement du module.
+Les responsabilités restent séparées : `src/bi/analytics/` porte les calculs métier, FastAPI réutilise ces fonctions et ne retourne que des agrégats, et React s’occupe de la navigation, des filtres et de leur présentation. Le détail des modules figure dans [`docs/architecture.md`](docs/architecture.md). Les chemins applicatifs sont définis dans `src/bi/config.py` relativement à l’emplacement du module.
 
 ## Lancement
 
-Après activation de l’environnement virtuel et installation des dépendances :
+Après activation de l’environnement virtuel et installation des dépendances, l’application Streamlit reste exécutable depuis la racine du dépôt :
 
 ```powershell
 python -m streamlit run dashboards/app.py
 ```
 
-### API FastAPI (migration progressive)
+### Dashboard React + API FastAPI
 
-L’API et Streamlit sont deux processus indépendants. Depuis la racine du projet,
-l’API démarre avec :
+Les serveurs sont indépendants. Dans un premier terminal, depuis la racine du projet, installez les dépendances Python puis démarrez l’API :
 
 ```powershell
+python -m pip install -r requirements.txt
 python -m uvicorn backend.app.main:app --reload
 ```
 
-La documentation interactive est disponible sur `http://127.0.0.1:8000/docs`.
-Les options de filtres sont exposées par `GET /api/v1/filters/options`, et les
-KPI de la vue d’ensemble par `GET /api/v1/overview`. Les filtres catégoriels
-utilisent des paramètres répétés, par exemple
-`/api/v1/overview?academic_years=2024%2F2025&stage_types=PFE`. Les paramètres
-`include_missing_year`, `include_missing_type` et `include_missing_nature`
-permettent d’inclure explicitement les valeurs absentes ; si un seul de ces
-paramètres est fourni à `true` sans valeur de catégorie, seules les lignes
-manquantes de ce champ sont sélectionnées. Un paramètre catégoriel omis avec
-son booléen omis est sans restriction ; fournir le booléen à `false` sans
-valeur sélectionnée produit un résultat vide. L’API ne retourne ni ligne source
-ni identifiant individuel.
+Dans un second terminal, installez les dépendances du frontend et lancez Vite :
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Le dashboard React est accessible sur `http://localhost:5173`. L’API est accessible sur `http://localhost:8000` et sa documentation interactive sur `http://localhost:8000/docs`. Pour utiliser une autre URL d’API en développement, créez `frontend/.env.local` à partir de `frontend/.env.example` et définissez `VITE_API_BASE_URL`. Le CORS de développement autorise uniquement les origines Vite locales `localhost:5173` et `127.0.0.1:5173`.
+
+Routes de lecture :
+
+- `GET /api/v1/health` — état de l’application.
+- `GET /api/v1/filters/options` — options réelles, valeurs manquantes comprises.
+- `GET /api/v1/overview` — KPI et répartitions de la vue d’ensemble.
+- `GET /api/v1/temporal` — séries annuelles et croisement année × type.
+- `GET /api/v1/stages` — répartitions type/nature et croisement type × nature.
+- `GET /api/v1/companies-geography` — couverture entreprise/géographie et détails géographiques publiables.
+- `GET /api/v1/quality` — couverture globale, filtrée et par année, et alertes.
+
+Les trois filtres globaux utilisent des paramètres de requête répétés, par exemple `?academic_years=2024%2F2025&stage_types=PFE`. `include_missing_year`, `include_missing_type` et `include_missing_nature` sélectionnent explicitement les valeurs absentes. Un paramètre de catégorie omis avec son booléen omis ne restreint pas cette catégorie ; fournir `include_missing_*=false` sans valeur catégorielle sélectionnée produit un résultat vide.
 
 Pour lancer les tests :
 
 ```powershell
 python -m unittest discover -s tests -v
-python -m pytest tests/test_api_v1.py -v
+python -m pytest tests -v
 ```
 
-Consultez [`docs/audit_bi.md`](docs/audit_bi.md), [`docs/cahier_fonctionnel_bi.md`](docs/cahier_fonctionnel_bi.md), [`docs/validation_bi_v2.md`](docs/validation_bi_v2.md) et [`docs/geographie_stages.md`](docs/geographie_stages.md) pour les limites, les validations et les décisions métier encore en attente.
+Depuis `frontend/`, les tests du service API, le lint et le build de production s’exécutent avec :
+
+```powershell
+npm test
+npm run lint
+npm run build
+```
+
+Streamlit n’est pas supprimé et reste la référence fonctionnelle historique jusqu’à validation métier complète. Consultez [`docs/audit_bi.md`](docs/audit_bi.md), [`docs/cahier_fonctionnel_bi.md`](docs/cahier_fonctionnel_bi.md), [`docs/validation_bi_v2.md`](docs/validation_bi_v2.md) et [`docs/geographie_stages.md`](docs/geographie_stages.md) pour les limites et décisions métier encore en attente.
+
+### Démo publique sur Render
+
+Le fichier `render.yaml` permet de déployer le frontend et l’API dans un seul service web. Le mode public utilise exclusivement des données synthétiques définies dans `backend/app/services/demo_data.py` ; il ne charge ni le classeur réel ni le référentiel géographique local.
+
+1. Poussez la branche `feature/react-fastapi-migration` sur GitHub.
+2. Dans Render, choisissez **New → Blueprint**, reliez le dépôt et sélectionnez cette branche.
+3. Vérifiez que le service `bi-femto-st-demo` est configuré avec `BI_DATA_MODE=demo`, puis lancez le déploiement.
+4. Après le déploiement, ouvrez l’URL `onrender.com` fournie par Render.
+
+Le Dockerfile construit React, puis FastAPI sert l’interface et l’API depuis la même origine. La bannière de démonstration est intégrée au frontend. Ne changez pas `BI_DATA_MODE` en `real` pour un service public : celui-ci n’inclut intentionnellement aucun fichier de données réel. L’offre gratuite Render peut mettre le service en veille après une période d’inactivité, ce qui ralentit la première requête suivante.

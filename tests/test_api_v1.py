@@ -1,6 +1,8 @@
 """Tests synthétiques de l'API V1, sans lecture du classeur réel."""
 
 from collections.abc import Iterator
+import json
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 import pandas as pd
@@ -8,6 +10,7 @@ import pytest
 
 from backend.app.main import app
 from backend.app.services import dashboard
+from bi.analytics.geography import REFERENCE_COLUMNS, destination_id
 from bi.ingestion import DataFileError, MissingColumnsError
 
 
@@ -39,6 +42,16 @@ def make_data() -> pd.DataFrame:
                 "Laboratoire",
                 "Non renseigné",
             ],
+            "entreprise": ["ACME", "ACME", "Laboratoire B", None],
+            "entreprise_lieu_stage": ["ACME", "ACME", "Laboratoire B", None],
+            "date_debut": [None, None, None, None],
+            "date_fin": [None, None, None, None],
+            "pays_lieu_stage": ["FRANCE", "FRANCE", "FRANCE", None],
+            "ville_lieu_stage": ["BESANÇON", "BESANÇON", "LYON", None],
+            "cp_lieu_stage": [None, None, None, None],
+            "ville": [None, None, None, None],
+            "code_postal": [None, None, None, None],
+            "date_soutenance": [None, None, None, None],
         }
     )
 
@@ -192,6 +205,166 @@ def test_empty_selection_can_be_expressed_without_reusing_old_results(
     assert response.status_code == 200
     assert response.json()["kpis"]["row_count"] == 0
     assert response.json()["conventions_by_nature"] == []
+
+
+def test_temporal_endpoint_returns_existing_cross_tab_aggregates(
+    client: TestClient,
+) -> None:
+    response = client.get("/api/v1/temporal")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["yearly_conventions"][0]["category"] == "2023/2024"
+    cross_tab = body["year_by_type"]
+    assert cross_tab["unavailable"] is False
+    assert cross_tab["grand_total"] == 3
+    pfe_cell = next(
+        cell
+        for cell in cross_tab["cells"]
+        if cell["row_category"] == "2024/2025"
+        and cell["column_category"] == "PFE"
+    )
+    assert pfe_cell["convention_count"] == 1
+    assert pfe_cell["percentage"] == 100.0
+    assert response.text.count("PRIVATE-CONVENTION") == 0
+
+
+def test_temporal_endpoint_returns_empty_results_for_empty_filter(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/api/v1/temporal",
+        params={"academic_years": "NO-SUCH-YEAR"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["yearly_conventions"] == []
+    assert body["year_by_type"]["cells"] == []
+    assert body["year_by_type"]["grand_total"] == 0
+
+
+def test_stage_endpoint_applies_multiple_filters_and_preserves_missing(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/api/v1/stages",
+        params=[
+            ("academic_years", "2024/2025"),
+            ("stage_types", "PFE"),
+            ("include_missing_nature", "true"),
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["conventions_by_type"][0]["convention_count"] == 1
+    missing_nature = next(
+        row
+        for row in body["conventions_by_nature"]
+        if row["category_is_missing"]
+    )
+    assert missing_nature["convention_count"] == 1
+    assert body["type_by_nature"]["unavailable"] is False
+    assert body["type_by_nature"]["grand_total"] == 1
+
+
+def test_companies_geography_endpoint_exposes_map_convention_details(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    reference_path = tmp_path / "geographic_reference.csv"
+    city = "BESANÇON"
+    country = "FRANCE"
+    reference = pd.DataFrame(
+        [
+            {
+                "destination_id": destination_id(city, country),
+                "source_city_label": city,
+                "source_country_label": country,
+                "city": city,
+                "country": country,
+                "latitude": 47.2378,
+                "longitude": 6.0241,
+                "status": "located",
+                "coordinate_source": "synthetic test",
+                "verified_at": "2026-01-01",
+                "validated": True,
+                "stage_ids": json.dumps(["LEGACY-REFERENCE-ID"]),
+                "companies": json.dumps(["ACME"]),
+            }
+        ],
+        columns=[*REFERENCE_COLUMNS, "stage_ids", "companies"],
+    )
+    reference.to_csv(reference_path, index=False)
+    monkeypatch.setattr(dashboard, "GEOGRAPHIC_REFERENCE_FILE", reference_path)
+    data = make_data()
+    app.dependency_overrides[dashboard.get_dashboard_data] = lambda: data
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/companies-geography")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["companies_available"] is True
+    assert body["companies"][0]["category"] == "ACME"
+    assert body["geography_available"] is True
+    assert any(
+        destination["city"] == city
+        and destination["convention_count"] == 1
+        and destination["conventions"] == [
+            {
+                "convention_id": "PRIVATE-CONVENTION-1",
+                "companies": ["ACME"],
+            }
+        ]
+        for destination in body["destinations"]
+    )
+    assert "PRIVATE-CONVENTION-1" in response.text
+    assert "PRIVATE-STUDENT" not in response.text
+    assert "LEGACY-REFERENCE-ID" not in response.text
+    assert "destination_id" not in response.text
+
+    monkeypatch.setattr(dashboard, "GEOGRAPHIC_MIN_CONVENTIONS_PER_DESTINATION", 5)
+    app.dependency_overrides[dashboard.get_dashboard_data] = lambda: data
+    try:
+        with TestClient(app) as client:
+            suppressed = client.get("/api/v1/companies-geography")
+    finally:
+        app.dependency_overrides.clear()
+    assert suppressed.status_code == 200
+    suppressed_body = suppressed.json()
+    assert suppressed_body["geography_summary"]["located_conventions"] == 1
+    assert suppressed_body["destinations"] == []
+    assert suppressed_body["countries"] == []
+    assert suppressed_body["distance_bands"] == []
+
+
+def test_quality_endpoint_separates_full_and_filtered_coverage(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/api/v1/quality",
+        params={"stage_types": "PFE"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["full_row_count"] == 4
+    assert body["full_convention_count"] == 3
+    assert body["filtered_convention_count"] == 1
+    country_coverage = next(
+        field
+        for field in body["filtered_coverage"]
+        if field["field"] == "pays_lieu_stage"
+    )
+    assert country_coverage["present_count"] == 2
+    assert country_coverage["denominator"] == 2
+    assert body["yearly_coverage"]
+    assert "PRIVATE-STUDENT" not in response.text
+    assert "PRIVATE-CONVENTION" not in response.text
 
 
 def test_source_load_errors_are_reported_without_paths_or_values(

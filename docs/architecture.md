@@ -1,8 +1,8 @@
-# Architecture de la partie BI
+# Architecture du dashboard BI
 
 ## Principes
 
-La partie BI est isolée dans le package Python `src/bi/` et organisée par responsabilité. Elle ne dépend pas d’une technologie particulière de visualisation. La configuration centrale des chemins se trouve dans `src/bi/config.py` et s’appuie sur `pathlib` ainsi que sur l’emplacement du module, pas sur le répertoire courant.
+La partie BI est isolée dans le package Python `src/bi/` et organisée par responsabilité. Les calculs métier ne dépendent pas de Streamlit, FastAPI ou d’une bibliothèque de visualisation. FastAPI orchestre les fonctions analytiques et ne retourne que des résultats agrégés ; React prend en charge la navigation, les filtres et la présentation. La configuration centrale des chemins se trouve dans `src/bi/config.py` et s’appuie sur `pathlib` ainsi que sur l’emplacement du module, pas sur le répertoire courant.
 
 ## Modules et dossiers
 
@@ -15,16 +15,21 @@ La partie BI est isolée dans le package Python `src/bi/` et organisée par resp
 - `src/bi/database/` accueillera les futurs modules de connexion et d’accès aux données stockées, si un stockage est retenu.
 - `src/bi/utils/` accueillera les fonctions utilitaires partagées.
 - `notebooks/` est destiné à l’exploration et à l’expérimentation.
-- `dashboards/` contient les cinq pages de l’interface Streamlit ; elle réutilise les fonctions analytiques sans les réimplémenter, utilise Plotly pour les graphiques et Folium/MarkerCluster pour la carte géographique lorsque le seuil de confidentialité sera approuvé.
-- `tests/` accueillera les tests automatisés et `docs/` la documentation technique.
+- `dashboards/` contient les cinq pages Streamlit, maintenues comme référence fonctionnelle pendant la migration.
+- `backend/app/api/v1/` regroupe les routes FastAPI et les dépendances de filtres communs. `schemas/` définit les contrats Pydantic ; `services/dashboard.py` charge les colonnes requises/facultatives et orchestre les fonctions `src/bi/analytics/`.
+- `frontend/src/` contient l’application React + TypeScript, ses services HTTP typés, ses types partagés, les composants graphiques et les pages. Vite fournit le serveur de développement et le build.
+- `tests/` contient les tests analytiques ainsi que les tests API basés sur des DataFrames et des référentiels géographiques synthétiques. `frontend/src/services/` teste la sérialisation des filtres de l’API.
+- `docs/` contient la documentation technique, fonctionnelle et les décisions métier.
 
-## Flux envisagé
+## Flux d’exécution
 
-Le flux prévu est : **fichier source → ingestion et validation du schéma → contrôles/transformations approuvés → analyses → tableau de bord**. Le stockage éventuel reste à décider. Le classeur de travail `data/raw/stages_cleaned2.xlsx` est chargé en lecture seule ; il n’est ni corrigé ni remplacé.
+Le flux est : **classeur Excel en lecture seule → ingestion et validation du schéma → filtres partagés → fonctions analytiques existantes → schémas Pydantic agrégés → API FastAPI → visualisations React**. Streamlit suit le même chemin d’ingestion et réutilise les mêmes calculs métier. Le stockage éventuel reste à décider ; le classeur `data/raw/stages_cleaned2.xlsx` n’est ni corrigé ni remplacé.
 
-Les calculs analytiques sont indépendants de Streamlit. Les tests synthétiques se lancent depuis la racine avec `python -m unittest discover -s tests -v`. Les exports ne sont pas activés tant que la politique de petits effectifs n’est pas approuvée.
+Les routes JSON destinées aux pages sont `GET /api/v1/health`, `/filters/options`, `/overview`, `/temporal`, `/stages`, `/companies-geography` et `/quality`. Les paramètres catégoriels sont répétés pour représenter plusieurs sélections ; les paramètres `include_missing_*` expriment explicitement la sélection des valeurs absentes. Une sélection vide produit un résultat vide, sans réutiliser une réponse précédente.
 
-La préparation du référentiel géographique est décrite dans `docs/geographie_stages.md`. Le CSV local n’est pas généré au lancement de l’application.
+Les réponses API n’exposent pas les lignes sources ni les identifiants étudiants. Les détails de destinations de `/companies-geography` comprennent toutefois, dans chaque destination publiée, les numéros de convention associés et les libellés du champ `entreprise` lorsqu’ils existent. Le seuil géographique est appliqué à ces détails comme aux autres vues. Les libellés d’entreprise restent exploratoires et ne sont pas harmonisés en entités juridiques. L’API n’a pas d’authentification et doit rester sur un réseau de confiance jusqu’à la mise en place d’un contrôle d’accès adapté. Aucun géocodage réseau n’est exécuté au lancement.
+
+La préparation et la validation du référentiel géographique sont décrites dans `docs/geographie_stages.md`. Les tests backend peuvent être exécutés depuis la racine avec `python -m pytest tests -q` et `python -m unittest discover -s tests -q`. Les vérifications du frontend (`npm test`, `npm run lint`, `npm run build`) s’exécutent depuis `frontend/`.
 
 ## Intégration Hybrid RAG
 

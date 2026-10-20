@@ -26,7 +26,7 @@ Les filtres Année académique, Type de stage et Nature du stage sont communs au
 
 ## Confidentialité
 
-Les tableaux et graphiques ne présentent que des agrégats ; aucun tableau de lignes ni identifiant, e-mail, adresse, titre ou description individuelle n’est affiché. Aucun téléchargement de source ou export agrégé n’est disponible.
+Les tableaux et graphiques sont agrégés, à l’exception des popups géographiques qui affichent les numéros de convention d’une destination et les libellés `entreprise` disponibles pour ces conventions. Aucun identifiant étudiant, e-mail, adresse, titre ou description de stage n’est affiché. Aucun téléchargement de source ou export n’est disponible. L’API ne comporte pas d’authentification : le service doit rester sur un réseau de confiance tant qu’un contrôle d’accès n’est pas déployé.
 
 La documentation ne fixe pas de seuil approuvé pour les petits effectifs. En conséquence, les détails d’entreprise et de pays sont explicitement présentés comme exploratoires et l’application n’autorise aucun export. Avant diffusion élargie, le seuil et les règles de protection contre les déductions par filtres devront être validés.
 
@@ -57,5 +57,5 @@ $env:PYTHONPATH = (Join-Path (Get-Location).Path 'src')
 - La source contient 265 couples ville+pays distincts dans un modèle construit en mémoire. Le modèle réel n’a pas été écrit ; aucune coordonnée de destination n’a encore été validée.
 - L’adresse et les coordonnées fixes de l’école ont été vérifiées sur les métadonnées de sa page officielle le 17 octobre 2026.
 - Plotly 6.9.0 est installé dans l’environnement vérifié. Folium et `streamlit-folium` ne le sont pas ; la dépendance cartographique est déclarée, mais la carte n’a pas été rendue ou vérifiée dans un navigateur.
-- Le sens métier des champs suffixés `_lieu_stage` reste à confirmer avec le propriétaire des données. Le seuil de 5 conventions par destination a été choisi et configuré ; l’approbation institutionnelle et les protections contre les déductions par filtres répétés restent à confirmer avant diffusion.
+- Le sens métier des champs suffixés `_lieu_stage` reste à confirmer avec le propriétaire des données. Le seuil de 1 convention par destination est actuellement configuré ; l’approbation institutionnelle et les protections contre les déductions par filtres répétés restent à confirmer avant diffusion.
 - Le classeur source n’a fait l’objet d’aucune écriture ; son SHA-256 est resté identique à celui mesuré avant l’implémentation.

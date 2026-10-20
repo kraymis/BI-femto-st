@@ -224,7 +224,9 @@ class GeographicReferenceTests(unittest.TestCase):
         ] == "located").all())
         self.assertEqual(len(loaded), len(make_reference()))
 
-    def test_companies_and_stage_ids_reach_destination_aggregation(self) -> None:
+    def test_destination_aggregation_keeps_conventions_with_company_names(
+        self,
+    ) -> None:
         reference = make_reference()
         reference["companies"] = ""
         reference["stage_ids"] = ""
@@ -234,7 +236,35 @@ class GeographicReferenceTests(unittest.TestCase):
         )
         reference.at[paris_index, "stage_ids"] = json.dumps(["CONV-SYN-1"])
 
-        result = aggregate_geography(make_data(), reference)
+        data = make_data()
+        data["entreprise"] = [
+            "Entreprise synthétique A",
+            "Entreprise synthétique A",
+            "Entreprise synthétique B",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
+
+        result = aggregate_geography(data, reference)
+        besancon = result.destinations.loc[
+            result.destinations["city"] == "Besançon"
+        ]
+        self.assertEqual(
+            besancon["conventions"].item(),
+            [
+                {
+                    "convention_id": "SYN-1",
+                    "companies": ["Entreprise synthétique A"],
+                }
+            ],
+        )
+
         paris = result.destinations.loc[result.destinations["city"] == "Paris"]
 
         self.assertEqual(

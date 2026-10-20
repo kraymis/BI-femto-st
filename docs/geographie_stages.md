@@ -100,25 +100,30 @@ catégories officielles de l’école.
 
 ## Carte et confidentialité
 
-La carte utilise Folium `MarkerCluster` intégré à Streamlit par
-`streamlit-folium`. Chaque marqueur correspond à une destination agrégée et
-jamais à une convention ou à un étudiant. Les épingles de destination sont
-dessinées en HTML/CSS par Leaflet (`DivIcon`) et ne dépendent pas d’un fichier
-image externe. Les tuiles OpenStreetMap et les
+La carte Streamlit utilise Folium `MarkerCluster` intégré par
+`streamlit-folium` ; la carte React utilise Leaflet. Chaque marqueur correspond
+à une destination agrégée. Les popups listent les numéros de convention
+associés et, lorsque renseigné, la valeur du champ `entreprise` pour chaque
+convention. Aucun identifiant étudiant n’est affiché. Les épingles de
+destination sont dessinées en HTML/CSS par Leaflet (`DivIcon`) et ne dépendent
+pas d’un fichier image externe. Les tuiles OpenStreetMap et les
 ressources Leaflet/MarkerCluster chargées par Folium nécessitent un accès réseau ;
 la carte peut donc ne pas s’afficher complètement hors réseau. Les coordonnées
 du référentiel et les calculs de distance restent locaux, et les tableaux
 agrégés restent disponibles si le fond cartographique ne charge pas.
 
-Le seuil de confidentialité configuré est de **5 conventions distinctes par
-destination**, conformément au choix exprimé pour cette version. Les
-destinations sous ce seuil sont exclues de la carte, du classement détaillé,
-des classes de distance et de la répartition détaillée par pays. La valeur est
-centralisée dans `GEOGRAPHIC_MIN_CONVENTIONS_PER_DESTINATION` dans
-`src/bi/config.py`. Avant une diffusion institutionnelle, le responsable des
-données doit confirmer que ce seuil et les protections contre les déductions
-par filtres répétés sont adaptés. La couverture agrégée et les statuts qualité
-restent visibles.
+Le seuil de confidentialité configuré est de **1 convention distincte par
+destination**. Les destinations sous ce seuil sont toujours exclues sur le
+plan descriptif, mais cette valeur doit être confirmée avec le propriétaire des
+données avant toute diffusion institutionnelle. La valeur est centralisée dans
+`GEOGRAPHIC_MIN_CONVENTIONS_PER_DESTINATION` dans `src/bi/config.py`. Les
+protections contre les déductions par filtres répétés restent à valider avec le
+responsable des données. La couverture agrégée et les statuts qualité restent
+visibles.
+
+L’API ne comporte pas d’authentification. Comme les popups exposent les
+numéros de convention, le service doit rester sur un réseau de confiance tant
+qu’un contrôle d’accès n’a pas été ajouté.
 
 ## Dépendances et commandes
 
