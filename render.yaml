@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bi-femto-st-demo
+    name: bi-femto-st
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -8,4 +8,4 @@ services:
     healthCheckPath: /api/v1/health
     envVars:
       - key: BI_DATA_MODE
-        value: demo
+        value: real

@@ -25,13 +25,15 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Données sources : ne jamais versionner les fichiers réels
+# Données sources : autoriser uniquement le jeu fictif explicitement approuvé
 data/raw/**
 !data/raw/.gitkeep
+!data/raw/stages_cleaned2.xlsx
 
-# Données intermédiaires ou préparées générées localement
+# Données intermédiaires : autoriser uniquement le référentiel fictif approuvé
 data/interim/**
 !data/interim/.gitkeep
+!data/interim/geographic_reference.csv
 data/processed/**
 !data/processed/.gitkeep
 

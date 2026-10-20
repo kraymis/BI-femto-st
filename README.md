@@ -42,7 +42,7 @@ python -m pip install -r requirements.txt
 
 ## Organisation
 
-- `data/` : emplacements des données brutes, intermédiaires et préparées. Le classeur local `data/raw/stages_cleaned2.xlsx` peut contenir des informations personnelles ; il ne doit pas être diffusé.
+- `data/` : emplacements des données brutes, intermédiaires et préparées. Les sources locales peuvent contenir des données personnelles : ne les versionnez pas sans validation. Pour ce déploiement, le classeur et le référentiel géographique ont été confirmés fictifs et approuvés pour publication.
 - `notebooks/` : futurs travaux exploratoires et expérimentations.
 - `src/bi/` : package Python de la partie BI, organisé par responsabilité.
 - `dashboards/` : interface Streamlit.
@@ -109,13 +109,13 @@ npm run build
 
 Streamlit n’est pas supprimé et reste la référence fonctionnelle historique jusqu’à validation métier complète. Consultez [`docs/audit_bi.md`](docs/audit_bi.md), [`docs/cahier_fonctionnel_bi.md`](docs/cahier_fonctionnel_bi.md), [`docs/validation_bi_v2.md`](docs/validation_bi_v2.md) et [`docs/geographie_stages.md`](docs/geographie_stages.md) pour les limites et décisions métier encore en attente.
 
-### Démo publique sur Render
+### Déploiement public sur Render
 
-Le fichier `render.yaml` permet de déployer le frontend et l’API dans un seul service web. Le mode public utilise exclusivement des données synthétiques définies dans `backend/app/services/demo_data.py` ; il ne charge ni le classeur réel ni le référentiel géographique local.
+Le fichier `render.yaml` déploie le frontend et l’API dans un seul service web. Il charge le classeur `data/raw/stages_cleaned2.xlsx` et le référentiel `data/interim/geographic_reference.csv`, qui sont suivis par Git pour ce déploiement parce qu’ils ont été confirmés fictifs et approuvés pour publication. Tout autre fichier sous `data/` reste ignoré et n’est pas copié dans l’image Docker.
 
 1. Poussez la branche `feature/react-fastapi-migration` sur GitHub.
 2. Dans Render, choisissez **New → Blueprint**, reliez le dépôt et sélectionnez cette branche.
-3. Vérifiez que le service `bi-femto-st-demo` est configuré avec `BI_DATA_MODE=demo`, puis lancez le déploiement.
+3. Vérifiez que le service `bi-femto-st` est configuré avec `BI_DATA_MODE=real`, puis lancez le déploiement.
 4. Après le déploiement, ouvrez l’URL `onrender.com` fournie par Render.
 
-Le Dockerfile construit React, puis FastAPI sert l’interface et l’API depuis la même origine. La bannière de démonstration est intégrée au frontend. Ne changez pas `BI_DATA_MODE` en `real` pour un service public : celui-ci n’inclut intentionnellement aucun fichier de données réel. L’offre gratuite Render peut mettre le service en veille après une période d’inactivité, ce qui ralentit la première requête suivante.
+Le Dockerfile construit React, puis FastAPI sert l’interface et l’API depuis la même origine. Le mode `real` lit ces deux fichiers sur le serveur ; Streamlit n’est pas utilisé par le service Render. L’offre gratuite Render peut mettre le service en veille après une période d’inactivité, ce qui ralentit la première requête suivante.
