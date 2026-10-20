@@ -312,12 +312,6 @@ function App() {
       </aside>
 
       <main className="main-content" id="overview">
-        {import.meta.env.VITE_DEMO_MODE === 'true' && (
-          <div className="demo-banner" role="status">
-            Démonstration publique : toutes les conventions, entreprises et
-            données affichées sont fictives.
-          </div>
-        )}
         <header className="topbar">
           <div className="breadcrumb">
             Pilotage des stages <span>/</span> <strong>{currentPageTitle}</strong>
