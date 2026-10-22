@@ -280,8 +280,7 @@ function App() {
             alt="Logo SUPMICROTECH-ENSMM"
           />
           <span className="brand-copy">
-            <strong>FEMTO-ST</strong>
-            <small>à SUPMICROTECH</small>
+            <strong>SUPMICROTECH</strong>
             <small>Pilotage des stages</small>
           </span>
         </a>
