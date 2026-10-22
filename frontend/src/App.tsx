@@ -325,7 +325,7 @@ function App() {
               <span className="status-dot" /> API BI
             </span>
             <span className="topbar-divider" />
-            <span>FEMTO-ST à SUPMICROTECH</span>
+            <span>SUPMICROTECH</span>
           </div>
         </header>
 
