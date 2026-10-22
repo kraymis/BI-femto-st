@@ -274,9 +274,14 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Accueil BI des stages">
-          <span className="brand-mark">BI</span>
+          <img
+            className="brand-logo"
+            src="/femto-st-logo.jpg"
+            alt="Logo SUPMICROTECH-ENSMM"
+          />
           <span className="brand-copy">
             <strong>FEMTO-ST</strong>
+            <small>à SUPMICROTECH</small>
             <small>Pilotage des stages</small>
           </span>
         </a>
@@ -321,7 +326,7 @@ function App() {
               <span className="status-dot" /> API BI
             </span>
             <span className="topbar-divider" />
-            <span>Supmicrotech-ENSMM</span>
+            <span>FEMTO-ST à SUPMICROTECH</span>
           </div>
         </header>
 

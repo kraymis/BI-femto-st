@@ -33,28 +33,25 @@
   align-items: center;
   color: inherit;
   display: flex;
-  gap: 12px;
-  margin: 0 7px 49px;
+  gap: 10px;
+  margin: 0 0 38px;
   text-decoration: none;
 }
 
-.brand-mark {
-  align-items: center;
-  background: #e7f0f8;
-  border-radius: 11px;
-  color: #1a4c73;
-  display: inline-flex;
-  font-size: 15px;
-  font-weight: 800;
-  height: 42px;
-  justify-content: center;
-  letter-spacing: -.8px;
-  width: 42px;
+.brand-logo {
+  background: #fff;
+  border-radius: 6px;
+  flex: 0 0 66px;
+  height: 48px;
+  object-fit: contain;
+  padding: 2px;
+  width: 66px;
 }
 
 .brand-copy {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .brand-copy strong {
