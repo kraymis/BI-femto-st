@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from backend.app.api.v1.endpoints import (
     companies_geography,
+    convention_search,
     filters,
     health,
     overview,
@@ -19,4 +20,5 @@ router.include_router(overview.router)
 router.include_router(temporal.router)
 router.include_router(stages.router)
 router.include_router(companies_geography.router)
+router.include_router(convention_search.router)
 router.include_router(quality.router)

@@ -20,9 +20,10 @@ from bi.ingestion import DataFileError, MissingColumnsError  # noqa: E402
 app = FastAPI(
     title="API BI des stages",
     description=(
-        "API de lecture agrégée pour la migration progressive du dashboard BI. "
-        "Les enregistrements sources et identifiants individuels ne sont jamais "
-        "retournés."
+        "API BI pour les analyses agrégées et la recherche structurée paginée. "
+        "La route de recherche de conventions retourne les champs personnels "
+        "autorisés par le propriétaire des données ; l’API n’a pas "
+        "d’authentification et doit rester réservée à un environnement approuvé."
     ),
     version="1.0.0",
 )
@@ -33,7 +34,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
     ],
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 app.include_router(v1_router)

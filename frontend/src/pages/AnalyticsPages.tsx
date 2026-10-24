@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import {
+  Circle,
   CircleMarker,
   MapContainer,
   Popup,
@@ -40,6 +41,8 @@ import type {
   TemporalAnalysisResponse,
 } from '../types'
 import CategoryChart from '../CategoryChart'
+import { DataTable } from '../components/DataTable'
+import { PaginationControls } from '../components/PaginationControls'
 
 const PAGE_TITLES: Record<Exclude<DashboardPage, 'overview'>, string> = {
   temporal: 'Analyse temporelle',
@@ -182,32 +185,6 @@ function Panel({
       </div>
       {children}
     </section>
-  )
-}
-
-function DataTable({
-  headers,
-  rows,
-  emptyMessage = 'Aucune donnée à afficher.',
-}: {
-  headers: string[]
-  rows: React.ReactNode[][]
-  emptyMessage?: string
-}) {
-  if (rows.length === 0) return <div className="table-empty">{emptyMessage}</div>
-  return (
-    <div className="table-scroll">
-      <table className="data-table">
-        <thead>
-          <tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   )
 }
 
@@ -507,14 +484,35 @@ function CoverageTable({ rows }: { rows: FieldCoverage[] }) {
   )
 }
 
-function DestinationMap({ destinations }: { destinations: GeographyDestination[] }) {
+function DestinationMap({
+  destinations,
+  radiusKm,
+  radiusEnabled,
+}: {
+  destinations: GeographyDestination[]
+  radiusKm: number
+  radiusEnabled: boolean
+}) {
   const bounds = useMemo(() => {
-    const points: [number, number][] = destinations.map(
-      (item) => [item.latitude, item.longitude],
-    )
-    points.push([47.250944, 5.9942287])
+    const points: [number, number][] = [
+      [47.250944, 5.9942287],
+      ...destinations.map(
+        (item): [number, number] => [item.latitude, item.longitude],
+      ),
+    ]
+    const schoolLatitude = 47.250944
+    const schoolLongitude = 5.9942287
+    if (radiusEnabled) {
+      const latitudeDelta = radiusKm / 111.32
+      const longitudeDelta =
+        radiusKm / (111.32 * Math.cos((schoolLatitude * Math.PI) / 180))
+      points.push(
+        [schoolLatitude - latitudeDelta, schoolLongitude - longitudeDelta],
+        [schoolLatitude + latitudeDelta, schoolLongitude + longitudeDelta],
+      )
+    }
     return latLngBounds(points)
-  }, [destinations])
+  }, [destinations, radiusKm, radiusEnabled])
   return (
     <div className="map-container">
       <MapContainer
@@ -528,6 +526,18 @@ function DestinationMap({ destinations }: { destinations: GeographyDestination[]
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {radiusEnabled && (
+          <Circle
+            center={[47.250944, 5.9942287]}
+            radius={radiusKm * 1000}
+            pathOptions={{
+              color: '#2f6f9f',
+              weight: 2,
+              fillColor: '#75a9cb',
+              fillOpacity: 0.12,
+            }}
+          />
+        )}
         {destinations.map((destination) => (
           <CircleMarker
             key={`${destination.city}:${destination.country ?? ''}`}
@@ -583,6 +593,94 @@ function CompaniesGeographyPage({ query }: { query: string }) {
   const [companyTopN, setCompanyTopN] = useState(10)
   const [companySearch, setCompanySearch] = useState('')
   const [destinationTopN, setDestinationTopN] = useState(10)
+  const [radiusKm, setRadiusKm] = useState(100)
+  const [radiusInputValue, setRadiusInputValue] = useState('100')
+  const [radiusEnabled, setRadiusEnabled] = useState(true)
+  const [conventionPagination, setConventionPagination] = useState({
+    query,
+    radiusKm: 100,
+    radiusEnabled: true,
+    page: 1,
+  })
+  const [conventionsPerPage, setConventionsPerPage] = useState(10)
+  const conventionPage =
+    conventionPagination.query === query &&
+    conventionPagination.radiusKm === radiusKm &&
+    conventionPagination.radiusEnabled === radiusEnabled
+      ? conventionPagination.page
+      : 1
+  const setConventionPage = (page: number) => {
+    setConventionPagination({ query, radiusKm, radiusEnabled, page })
+  }
+  const destinations = useMemo(
+    () =>
+      [...(resource.data?.destinations ?? [])].sort(
+        (a, b) => b.convention_count - a.convention_count,
+      ),
+    [resource.data],
+  )
+  const nearbyDestinations = useMemo(
+    () =>
+      radiusEnabled
+        ? destinations.filter((destination) => destination.distance_km <= radiusKm)
+        : destinations,
+    [destinations, radiusKm, radiusEnabled],
+  )
+  const nearbyConventions = useMemo(() => {
+    const conventions = new Map<
+      string,
+      { destination: GeographyDestination; companies: Set<string> }
+    >()
+    for (const destination of nearbyDestinations) {
+      for (const convention of destination.conventions) {
+        const detail = conventions.get(convention.convention_id) ?? {
+          destination,
+          companies: new Set<string>(),
+        }
+        for (const company of convention.companies) {
+          detail.companies.add(company)
+        }
+        conventions.set(convention.convention_id, detail)
+      }
+    }
+    return [...conventions.entries()].sort(([left], [right]) =>
+      left.localeCompare(right, 'fr', { numeric: true }),
+    )
+  }, [nearbyDestinations])
+  const totalConventionPages = Math.ceil(
+    nearbyConventions.length / conventionsPerPage,
+  )
+  const displayedConventionPage = Math.min(
+    conventionPage,
+    totalConventionPages || 1,
+  )
+  const visibleConventions = nearbyConventions.slice(
+    (displayedConventionPage - 1) * conventionsPerPage,
+    displayedConventionPage * conventionsPerPage,
+  )
+  const updateRadius = (nextRadius: number) => {
+    setRadiusKm(nextRadius)
+    setRadiusInputValue(String(nextRadius))
+    setConventionPagination({
+      query,
+      radiusKm: nextRadius,
+      radiusEnabled,
+      page: 1,
+    })
+  }
+  const updateRadiusEnabled = (enabled: boolean) => {
+    setRadiusEnabled(enabled)
+    setConventionPagination({ query, radiusKm, radiusEnabled: enabled, page: 1 })
+  }
+  const updateRadiusInput = (value: string) => {
+    setRadiusInputValue(value)
+    if (value.trim() === '') return
+    const nextRadius = Number(value)
+    if (Number.isInteger(nextRadius) && nextRadius >= 25 && nextRadius <= 1000) {
+      updateRadius(nextRadius)
+    }
+  }
+
   return (
     <PageStatus resource={resource}>
       {(data) => {
@@ -590,8 +688,11 @@ function CompaniesGeographyPage({ query }: { query: string }) {
         const companies = data.companies.filter((row) =>
           row.category.toLocaleLowerCase('fr').includes(companySearch.trim().toLocaleLowerCase('fr')),
         )
-        const destinations = [...data.destinations]
-          .sort((a, b) => b.convention_count - a.convention_count)
+        const nearbyCompanies = new Set(
+          nearbyConventions.flatMap(([, detail]) => [
+            ...detail.companies,
+          ]),
+        )
         return (
           <div className="analysis-page">
             <p className="page-subtitle">
@@ -734,10 +835,152 @@ function CompaniesGeographyPage({ query }: { query: string }) {
                   ) : (
                     <>
                       <h3 className="analysis-subheading">Destinations localisées</h3>
-                      <DestinationMap destinations={data.destinations} />
+                      <div className="radius-control">
+                        <label className="radius-enable">
+                          <input
+                            type="checkbox"
+                            checked={radiusEnabled}
+                            onChange={(event) => updateRadiusEnabled(event.target.checked)}
+                          />
+                          <span>Activer le filtre par rayon</span>
+                          <small>
+                            {radiusEnabled
+                              ? 'Seules les destinations dans le rayon sont affichées.'
+                              : 'Désactivé : toutes les destinations localisées qui respectent le seuil sont affichées.'}
+                          </small>
+                        </label>
+                        <div className="radius-control-heading">
+                          <div>
+                            <label htmlFor="geography-radius">
+                              Rayon autour de SUPMICROTECH-ENSMM
+                            </label>
+                            <p>Distance estimée à vol d’oiseau</p>
+                          </div>
+                          <label className="radius-number-field">
+                            <span>Rayon</span>
+                            <div>
+                              <input
+                                id="geography-radius"
+                                type="number"
+                                min="25"
+                                max="1000"
+                                step="1"
+                                value={radiusInputValue}
+                                disabled={!radiusEnabled}
+                                aria-label="Rayon en kilomètres"
+                                aria-invalid={
+                                  radiusInputValue.trim() !== '' &&
+                                  (!Number.isInteger(Number(radiusInputValue)) ||
+                                    Number(radiusInputValue) < 25 ||
+                                    Number(radiusInputValue) > 1000)
+                                }
+                                onBlur={() => {
+                                  const parsedRadius = Number(radiusInputValue)
+                                  if (
+                                    !Number.isInteger(parsedRadius) ||
+                                    parsedRadius < 25 ||
+                                    parsedRadius > 1000
+                                  ) {
+                                    setRadiusInputValue(String(radiusKm))
+                                  }
+                                }}
+                                onChange={(event) => {
+                                  updateRadiusInput(event.target.value)
+                                }}
+                              />
+                              <span>km</span>
+                            </div>
+                          </label>
+                        </div>
+                        <div className="radius-slider">
+                          <input
+                            id="geography-radius-slider"
+                            type="range"
+                            min="25"
+                            max="1000"
+                            step="1"
+                            value={radiusKm}
+                            disabled={!radiusEnabled}
+                            aria-valuetext={`${radiusKm} kilomètres`}
+                            onChange={(event) => updateRadius(Number(event.target.value))}
+                          />
+                          <div className="radius-slider-scale" aria-hidden="true">
+                            <span>25 km</span>
+                            <span>1 000 km</span>
+                          </div>
+                        </div>
+                        <div className="radius-presets" aria-label="Rayons rapides">
+                          <span>Repères rapides</span>
+                          {[50, 100, 250, 500].map((preset) => (
+                            <button
+                              type="button"
+                              key={preset}
+                              className={radiusKm === preset ? 'active' : ''}
+                              aria-pressed={radiusKm === preset}
+                              disabled={!radiusEnabled}
+                              onClick={() => updateRadius(preset)}
+                            >
+                              {preset} km
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <p className="chart-caption">
-                        Les marqueurs représentent des destinations agrégées ; les popups listent les conventions associées, jamais des identifiants étudiants.
-                        Les détails sous le seuil de {data.geography_threshold} convention(s) sont masqués.
+                        {radiusEnabled
+                          ? `Le cercle et les résultats utilisent la distance estimée à vol d’oiseau. Les destinations localisées dans un rayon de ${radiusKm} km et respectant le seuil sont affichées.`
+                          : 'Le filtre par rayon est désactivé : toutes les destinations localisées respectant le seuil configuré sont affichées.'}
+                      </p>
+                      <DestinationMap
+                        destinations={nearbyDestinations}
+                        radiusKm={radiusKm}
+                        radiusEnabled={radiusEnabled}
+                      />
+                      <div className="metrics-grid geo-metrics radius-metrics">
+                        <Metric
+                          label={radiusEnabled ? 'Destinations dans le rayon' : 'Destinations localisées'}
+                          value={nearbyDestinations.length}
+                        />
+                        <Metric
+                          label={radiusEnabled ? 'Conventions dans le rayon' : 'Conventions localisées'}
+                          value={nearbyConventions.length}
+                        />
+                        <Metric label="Entreprises renseignées" value={nearbyCompanies.size} />
+                      </div>
+                      <h3 className="analysis-subheading">
+                        {radiusEnabled
+                          ? 'Conventions et entreprises dans le rayon'
+                          : 'Conventions et entreprises des destinations localisées'}
+                      </h3>
+                      <DataTable
+                        headers={['Ville', 'Pays', 'Convention', 'Entreprise(s)']}
+                        rows={visibleConventions.map(
+                          ([conventionId, detail]) => [
+                            detail.destination.city,
+                            detail.destination.country ?? 'Non renseigné',
+                            conventionId,
+                            [...detail.companies].join(', ') || 'Non renseignée',
+                          ],
+                        )}
+                        emptyMessage={radiusEnabled
+                          ? `Aucune destination localisée dans un rayon de ${radiusKm} km.`
+                          : 'Aucune convention associée aux destinations localisées.'}
+                      />
+                      {nearbyConventions.length > 0 && (
+                        <PaginationControls
+                          page={displayedConventionPage}
+                          pageSize={conventionsPerPage}
+                          totalCount={nearbyConventions.length}
+                          totalPages={totalConventionPages}
+                          itemLabel="conventions"
+                          onPageChange={setConventionPage}
+                          onPageSizeChange={(size) => {
+                            setConventionsPerPage(size)
+                            setConventionPage(1)
+                          }}
+                        />
+                      )}
+                      <p className="chart-caption">
+                        Les données affichées concernent les conventions associées à des destinations dont les coordonnées sont localisées et respectent le seuil de {data.geography_threshold} convention(s). Aucun identifiant étudiant n’est exposé.
                       </p>
                       <div className="inline-controls">
                         <label>

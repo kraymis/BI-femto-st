@@ -18,7 +18,7 @@ Ce document décrit les fonctionnalités à réaliser ultérieurement avec Pytho
 | Responsables de formation ou des stages, selon les droits qui seront définis | Exploration agrégée par année, type, nature et organisme d’accueil. |
 | Responsable des données | Comprendre la couverture, les valeurs inconnues et les avertissements accompagnant les mesures. |
 
-L’interface est destinée principalement à un usage sur ordinateur. Elle doit être entièrement rédigée en français, utiliser des libellés explicites et expliquer les dénominateurs des pourcentages. Les vues générales ne permettent pas de retrouver la fiche d’un étudiant ou d’un stage individuel.
+L’interface est destinée principalement à un usage sur ordinateur. Elle doit être entièrement rédigée en français, utiliser des libellés explicites et expliquer les dénominateurs des pourcentages. Les vues générales restent agrégées ; une recherche distincte et paginée des conventions expose uniquement les champs autorisés par le propriétaire des données.
 
 ## 3. Périmètre fonctionnel et exclusions
 
@@ -26,6 +26,7 @@ L’interface est destinée principalement à un usage sur ordinateur. Elle doit
 
 - Import contrôlé du classeur approuvé, sans transformation implicite.
 - Mesures descriptives au niveau agrégé et filtres partagés.
+- Recherche multicritère paginée des conventions, indépendante des filtres globaux, limitée aux champs sélectionnés et autorisés.
 - Indicateurs de couverture et avertissements de qualité.
 - Pages de synthèse, partenariats, géographie et composition des stages.
 - Comparaisons de périodes après traitement des années incomplètes.
@@ -34,7 +35,7 @@ L’interface est destinée principalement à un usage sur ordinateur. Elle doit
 ### Exclus
 
 - Tout nettoyage automatique, déduplication, imputation ou harmonisation non approuvée.
-- Affichage de données nominatives ou d’enregistrements individuels.
+- Exposition de champs individuels hors de la recherche de conventions autorisée ; notamment les courriels, adresses et descriptions détaillées.
 - NLP, analyse sémantique des descriptions, RAG, IA générative et prédiction.
 - Base de données, API, service externe, carte géographique ou infrastructure supplémentaire sans besoin démontré.
 - Génération automatique d’interprétations ou de recommandations métier.
@@ -406,7 +407,7 @@ Le projet déclare actuellement `pandas` et `openpyxl`. Streamlit n’est pas d�
 | AC-06 | Chaque pourcentage expose son dénominateur et permet d’identifier la part de données manquantes. |
 | AC-07 | Les années académiques incomplètes ou non comparables sont annotées ; elles ne sont pas mises en comparaison silencieuse avec une année close. |
 | AC-08 | Les KPI de durée restent masqués ou marqués « à valider » avant adoption d’une définition métier écrite. |
-| AC-09 | Les vues et exports n’exposent aucun identifiant étudiant, e-mail, adresse ou description individuelle de stage. Les popups géographiques peuvent afficher les numéros de convention et libellés `entreprise` associés à une destination publiée ; l’API doit rester sur un réseau de confiance tant qu’elle n’est pas authentifiée. |
+| AC-09 | Les vues agrégées et exports n’exposent aucun identifiant étudiant, e-mail, adresse ou description individuelle de stage. L’exception est la recherche paginée de conventions, qui expose les noms/prénoms et identifiants étudiants limités et autorisés par le propriétaire des données. Les popups géographiques peuvent afficher les numéros de convention et libellés `entreprise` associés à une destination publiée ; l’API doit rester sur un réseau de confiance tant qu’elle n’est pas authentifiée. |
 | AC-10 | Les petits effectifs et croisements sont bloqués ou protégés selon le seuil approuvé ; sans seuil, l’export détaillé n’est pas activé. |
 | AC-11 | Aucune opération de nettoyage, déduplication ou écriture n’est appliquée au classeur brut par l’application. |
 | AC-12 | Une sélection sans résultat affiche un état vide explicite et ne laisse pas visibles des résultats obsolètes. |

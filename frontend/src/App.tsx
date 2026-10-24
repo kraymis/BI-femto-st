@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { ConventionSearch } from './ConventionSearch'
 import {
   createFilterQuery,
   getFilterOptions,
@@ -384,6 +385,7 @@ function App() {
 
         {activePage === 'overview' ? (
           <>
+        <ConventionSearch />
         <div className="section-heading">
           <div>
             <h2>Indicateurs clés</h2>
@@ -524,7 +526,7 @@ function App() {
         <footer className="page-footer">
           <span>BI · Pilotage des stages</span>
           <span>
-            Source chargée côté serveur · Identifiants étudiants non affichés ·
+            Source chargée côté serveur · Identifiants affichés uniquement dans la recherche de conventions ·
             Détail des conventions localisées dans les popups
           </span>
         </footer>

@@ -151,6 +151,50 @@ export interface CompanyGeographyResponse {
   distance_bands: CategoryAggregate[]
 }
 
+export interface ConventionSearchOptions {
+  available_fields: string[]
+  academic_years: FilterOption[]
+  stage_types: FilterOption[]
+  stage_natures: FilterOption[]
+}
+
+export interface ConventionSearchCriteria {
+  subject_id?: string
+  convention_id?: string
+  company_contains?: string
+  student_name_contains?: string
+  student_id_exact?: string
+  academic_year?: string
+  academic_year_missing?: boolean
+  stage_type?: string
+  stage_type_missing?: boolean
+  stage_nature?: string
+  stage_nature_missing?: boolean
+  city_contains?: string
+  country_contains?: string
+}
+
+export interface ConventionSearchResult {
+  convention_id: string | null
+  subject_id: string | null
+  student_id: string | null
+  student_name: string | null
+  company: string | null
+  academic_year: string | null
+  stage_type: string | null
+  stage_nature: string | null
+  city: string | null
+  country: string | null
+}
+
+export interface ConventionSearchResponse {
+  total_count: number
+  page: number
+  page_size: number
+  total_pages: number
+  results: ConventionSearchResult[]
+}
+
 export interface MissingField {
   field: string
   label: string

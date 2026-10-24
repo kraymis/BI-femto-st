@@ -1,5 +1,8 @@
 import type {
   CompanyGeographyResponse,
+  ConventionSearchCriteria,
+  ConventionSearchOptions,
+  ConventionSearchResponse,
   FilterOptions,
   OverviewResponse,
   QualityResponse,
@@ -117,6 +120,47 @@ export function getCompaniesGeography(query: string, signal?: AbortSignal) {
     `${API_BASE_URL}/api/v1/companies-geography?${query}`,
     signal,
   )
+}
+
+export function getConventionSearchOptions(signal?: AbortSignal) {
+  return fetchJson<ConventionSearchOptions>(
+    `${API_BASE_URL}/api/v1/conventions/search/options`,
+    signal,
+  )
+}
+
+export function searchConventions(
+  criteria: ConventionSearchCriteria,
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+) {
+  return fetch(`${API_BASE_URL}/api/v1/conventions/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...criteria, page, page_size: pageSize }),
+    signal,
+  }).then(async (response) => {
+    if (!response.ok) {
+      let message = `Le service a répondu avec le code ${response.status}.`
+      try {
+        const error = (await response.json()) as ApiError & { detail?: string }
+        if (error.message) message = error.message
+        else if (error.detail) message = error.detail
+      } catch {
+        // Keep the status-based message when the response is not JSON.
+      }
+      throw new Error(message)
+    }
+    return (await response.json()) as ConventionSearchResponse
+  }).catch((error: unknown) => {
+    if (error instanceof TypeError) {
+      throw new Error(
+        'Impossible de joindre l’API de recherche. Vérifiez que le backend est démarré et que son URL/CORS autorise le frontend.',
+      )
+    }
+    throw error
+  })
 }
 
 export function getQuality(query: string, signal?: AbortSignal) {

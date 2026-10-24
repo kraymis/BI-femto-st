@@ -79,6 +79,23 @@ def test_health_does_not_load_source_or_expose_local_details(
     assert response.json() == {"status": "ok"}
 
 
+def test_convention_search_allows_browser_cors_preflight_for_post(
+    client: TestClient,
+) -> None:
+    response = client.options(
+        "/api/v1/conventions/search",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "POST" in response.headers["access-control-allow-methods"]
+
+
 def test_filter_options_include_missing_as_explicit_option(
     client: TestClient,
 ) -> None:

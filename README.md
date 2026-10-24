@@ -4,9 +4,9 @@ Cette partie du projet de fin d’études « Système d’information intelligen
 
 ## Objectifs de la partie BI
 
-Le dashboard comprend cinq pages : Vue d’ensemble, Analyse temporelle, Analyse des stages, Entreprises et géographie, et Qualité des données. L’interface React consomme les agrégats calculés par FastAPI ; Streamlit reste disponible comme référence fonctionnelle pendant la migration. Les deux applications lisent les mêmes données et ne les modifient pas.
+Le dashboard comprend cinq pages : Vue d’ensemble, Analyse temporelle, Analyse des stages, Entreprises et géographie, et Qualité des données. L’interface React consomme les agrégats calculés par FastAPI ; Streamlit reste disponible comme référence fonctionnelle pendant la migration. Les deux applications lisent les mêmes données et ne les modifient pas. La Vue d’ensemble propose également une recherche structurée et paginée des conventions, indépendante des filtres globaux.
 
-Les KPI continuent de compter les conventions distinctes, sans les assimiler à un nombre de stages validé. Les réponses ne renvoient pas de lignes brutes ni d’identifiants étudiants. Les popups de la carte affichent toutefois les numéros de convention associés à chaque destination et, lorsque renseigné, le champ `entreprise` correspondant. L’API ne dispose pas d’authentification : ne l’exposez pas à un réseau non autorisé. Les détails géographiques respectent le seuil configuré dans `src/bi/config.py`.
+Les KPI continuent de compter les conventions distinctes, sans les assimiler à un nombre de stages validé. Les endpoints analytiques renvoient des agrégats ; l’endpoint de recherche de conventions renvoie une page limitée de champs, dont le nom, le prénom et l’identifiant étudiant, conformément à l’autorisation explicite du propriétaire des données. Les popups de la carte affichent les numéros de convention associés à chaque destination et, lorsque renseigné, le champ `entreprise` correspondant. L’API ne dispose pas d’authentification : ne l’exposez pas à un réseau non autorisé. Les détails géographiques respectent le seuil configuré dans `src/bi/config.py`.
 
 ## Prérequis
 
@@ -51,7 +51,7 @@ python -m pip install -r requirements.txt
 - `tests/` : tests synthétiques des fonctions analytiques et d’ingestion.
 - `docs/` : documentation technique et décisions d’architecture.
 
-Les responsabilités restent séparées : `src/bi/analytics/` porte les calculs métier, FastAPI réutilise ces fonctions et ne retourne que des agrégats, et React s’occupe de la navigation, des filtres et de leur présentation. Le détail des modules figure dans [`docs/architecture.md`](docs/architecture.md). Les chemins applicatifs sont définis dans `src/bi/config.py` relativement à l’emplacement du module.
+Les responsabilités restent séparées : `src/bi/analytics/` porte les calculs métier, FastAPI réutilise ces fonctions pour les agrégats et expose séparément les champs limités de la recherche de conventions, et React s’occupe de la navigation, des filtres et de leur présentation. Le détail des modules figure dans [`docs/architecture.md`](docs/architecture.md). Les chemins applicatifs sont définis dans `src/bi/config.py` relativement à l’emplacement du module.
 
 ## Lancement
 
@@ -89,6 +89,10 @@ Routes de lecture :
 - `GET /api/v1/stages` — répartitions type/nature et croisement type × nature.
 - `GET /api/v1/companies-geography` — couverture entreprise/géographie et détails géographiques publiables.
 - `GET /api/v1/quality` — couverture globale, filtrée et par année, et alertes.
+- `GET /api/v1/conventions/search/options` — champs disponibles et options catégorielles de recherche.
+- `POST /api/v1/conventions/search` — recherche multicritère indépendante des filtres globaux, paginée côté serveur.
+
+La recherche renvoie les champs d’identification étudiant (`n_etudiant`, nom et prénom) après autorisation explicite du propriétaire des données. L’API n’a pas d’authentification : le déploiement doit rester réservé à un environnement approuvé pour ces données. Le classeur courant ne contient pas d’identifiant de sujet PFE (`id_sujet_pfe`), ce critère n’est donc pas proposé. Les résultats sont limités aux colonnes utiles de la recherche ; les courriels, adresses et descriptions de stage ne sont pas renvoyés.
 
 Les trois filtres globaux utilisent des paramètres de requête répétés, par exemple `?academic_years=2024%2F2025&stage_types=PFE`. `include_missing_year`, `include_missing_type` et `include_missing_nature` sélectionnent explicitement les valeurs absentes. Un paramètre de catégorie omis avec son booléen omis ne restreint pas cette catégorie ; fournir `include_missing_*=false` sans valeur catégorielle sélectionnée produit un résultat vide.
 

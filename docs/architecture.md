@@ -2,7 +2,7 @@
 
 ## Principes
 
-La partie BI est isolée dans le package Python `src/bi/` et organisée par responsabilité. Les calculs métier ne dépendent pas de Streamlit, FastAPI ou d’une bibliothèque de visualisation. FastAPI orchestre les fonctions analytiques et ne retourne que des résultats agrégés ; React prend en charge la navigation, les filtres et la présentation. La configuration centrale des chemins se trouve dans `src/bi/config.py` et s’appuie sur `pathlib` ainsi que sur l’emplacement du module, pas sur le répertoire courant.
+La partie BI est isolée dans le package Python `src/bi/` et organisée par responsabilité. Les calculs métier ne dépendent pas de Streamlit, FastAPI ou d’une bibliothèque de visualisation. FastAPI orchestre les fonctions analytiques et renvoie des résultats agrégés, tout en exposant une route distincte aux champs limités de recherche de conventions ; React prend en charge la navigation, les filtres et la présentation. La configuration centrale des chemins se trouve dans `src/bi/config.py` et s’appuie sur `pathlib` ainsi que sur l’emplacement du module, pas sur le répertoire courant.
 
 ## Modules et dossiers
 
@@ -27,7 +27,9 @@ Le flux est : **classeur Excel en lecture seule → ingestion et validation du s
 
 Les routes JSON destinées aux pages sont `GET /api/v1/health`, `/filters/options`, `/overview`, `/temporal`, `/stages`, `/companies-geography` et `/quality`. Les paramètres catégoriels sont répétés pour représenter plusieurs sélections ; les paramètres `include_missing_*` expriment explicitement la sélection des valeurs absentes. Une sélection vide produit un résultat vide, sans réutiliser une réponse précédente.
 
-Les réponses API n’exposent pas les lignes sources ni les identifiants étudiants. Les détails de destinations de `/companies-geography` comprennent toutefois, dans chaque destination publiée, les numéros de convention associés et les libellés du champ `entreprise` lorsqu’ils existent. Le seuil géographique est appliqué à ces détails comme aux autres vues. Les libellés d’entreprise restent exploratoires et ne sont pas harmonisés en entités juridiques. L’API n’a pas d’authentification et doit rester sur un réseau de confiance jusqu’à la mise en place d’un contrôle d’accès adapté. Aucun géocodage réseau n’est exécuté au lancement.
+Les endpoints analytiques ne renvoient pas de lignes sources ni d’identifiants étudiants. `/api/v1/conventions/search` est une exception fonctionnelle : il renvoie une page de champs sélectionnés, notamment le nom/prénom et l’identifiant étudiant, conformément à l’autorisation explicite donnée par le propriétaire des données. Les courriels, adresses et descriptions ne sont jamais inclus. Les résultats de recherche n’utilisent pas les filtres globaux du dashboard. Le champ `id_sujet_pfe` n’existe pas dans le classeur examiné et n’est donc pas proposé.
+
+Les détails de destinations de `/companies-geography` comprennent, dans chaque destination publiée, les numéros de convention associés et les libellés du champ `entreprise` lorsqu’ils existent. Le seuil géographique est appliqué à ces détails comme aux autres vues. Les libellés d’entreprise restent exploratoires et ne sont pas harmonisés en entités juridiques. L’API n’a pas d’authentification et doit rester sur un réseau de confiance jusqu’à la mise en place d’un contrôle d’accès adapté. Aucun géocodage réseau n’est exécuté au lancement.
 
 La préparation et la validation du référentiel géographique sont décrites dans `docs/geographie_stages.md`. Les tests backend peuvent être exécutés depuis la racine avec `python -m pytest tests -q` et `python -m unittest discover -s tests -q`. Les vérifications du frontend (`npm test`, `npm run lint`, `npm run build`) s’exécutent depuis `frontend/`.
 

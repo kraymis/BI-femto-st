@@ -112,6 +112,15 @@ la carte peut donc ne pas s’afficher complètement hors réseau. Les coordonn�
 du référentiel et les calculs de distance restent locaux, et les tableaux
 agrégés restent disponibles si le fond cartographique ne charge pas.
 
+Dans les cartes React et Streamlit, le curseur de rayon (25 à 1 000 km, pas de
+25 km, valeur initiale 100 km) dessine un cercle autour de SUPMICROTECH-ENSMM.
+Les marqueurs et le tableau des conventions/entreprises sont limités aux
+destinations localisées dont la distance à vol d’oiseau est inférieure ou égale
+au rayon choisi. Les compteurs du rayon indiquent les destinations, les
+conventions distinctes et les libellés d’entreprise renseignés. Ils suivent les
+filtres globaux et le seuil géographique déjà appliqué ; les destinations non
+localisées ne peuvent pas être incluses.
+
 Le seuil de confidentialité configuré est de **1 convention distincte par
 destination**. Les destinations sous ce seuil sont toujours exclues sur le
 plan descriptif, mais cette valeur doit être confirmée avec le propriétaire des

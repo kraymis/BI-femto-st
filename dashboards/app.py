@@ -837,6 +837,18 @@ def _render_exploration_page(data: pd.DataFrame) -> None:
     _render_geographic_analysis(data)
 
 
+def _sync_geographic_radius_input() -> None:
+    st.session_state["geographic_radius_km"] = int(
+        st.session_state["geographic_radius_input"]
+    )
+
+
+def _sync_geographic_radius_slider() -> None:
+    st.session_state["geographic_radius_input"] = int(
+        st.session_state["geographic_radius_km"]
+    )
+
+
 def _render_geographic_analysis(data: pd.DataFrame) -> None:
     st.subheader("Couverture géographique et distances")
     st.caption(
@@ -992,6 +1004,121 @@ def _render_geographic_analysis(data: pd.DataFrame) -> None:
         )
         return
 
+    st.session_state.setdefault("geographic_radius_enabled", True)
+    st.session_state.setdefault(
+        "geographic_radius_km",
+        int(st.session_state.get("geographic_radius_input", 100)),
+    )
+    st.session_state.setdefault(
+        "geographic_radius_input",
+        int(st.session_state["geographic_radius_km"]),
+    )
+    radius_enabled = st.checkbox(
+        "Activer le filtre par rayon",
+        key="geographic_radius_enabled",
+        help="Désactivez cette option pour afficher toutes les destinations localisées.",
+    )
+    radius_controls = st.columns([2, 5])
+    radius_km = int(st.session_state["geographic_radius_km"])
+    with radius_controls[0]:
+        st.number_input(
+            "Rayon autour de SUPMICROTECH-ENSMM (km)",
+            min_value=25,
+            max_value=1000,
+            step=1,
+            key="geographic_radius_input",
+            on_change=_sync_geographic_radius_input,
+            disabled=not radius_enabled,
+            help="Saisissez une valeur entière comprise entre 25 et 1 000 km.",
+        )
+    with radius_controls[1]:
+        st.slider(
+            "Ajuster le rayon",
+            min_value=25,
+            max_value=1000,
+            step=1,
+            key="geographic_radius_km",
+            on_change=_sync_geographic_radius_slider,
+            disabled=not radius_enabled,
+            help="Distance à vol d’oiseau estimée entre l’école et chaque destination.",
+            label_visibility="collapsed",
+        )
+    radius_km = int(st.session_state["geographic_radius_km"])
+    nearby_destinations = (
+        destinations.loc[destinations["distance_km"] <= radius_km].copy()
+        if radius_enabled
+        else destinations.copy()
+    )
+    nearby_conventions: dict[str, dict[str, Any]] = {}
+    for destination in nearby_destinations.itertuples(index=False):
+        for convention in getattr(destination, "conventions", []):
+            convention_id = str(convention["convention_id"])
+            detail = nearby_conventions.setdefault(
+                convention_id,
+                {
+                    "city": str(destination.city),
+                    "country": str(destination.country or "Non renseigné"),
+                    "companies": set(),
+                },
+            )
+            detail["companies"].update(convention["companies"])
+    nearby_companies = {
+        company
+        for detail in nearby_conventions.values()
+        for company in detail["companies"]
+    }
+    radius_metrics = st.columns(3)
+    radius_metrics[0].metric(
+        "Destinations dans le rayon" if radius_enabled else "Destinations localisées",
+        _format_count(len(nearby_destinations)),
+    )
+    radius_metrics[1].metric(
+        "Conventions dans le rayon" if radius_enabled else "Conventions localisées",
+        _format_count(len(nearby_conventions)),
+    )
+    radius_metrics[2].metric(
+        "Entreprises renseignées",
+        _format_count(len(nearby_companies)),
+    )
+    st.caption(
+        (
+            f"Résultats calculés à vol d’oiseau dans un rayon de {radius_km} km. "
+            "Seules les destinations localisées et respectant le seuil configuré "
+            "sont prises en compte."
+            if radius_enabled
+            else "Filtre par rayon désactivé : toutes les destinations localisées "
+            "et respectant le seuil configuré sont prises en compte."
+        )
+    )
+    convention_rows = [
+        {
+            "Ville": detail["city"],
+            "Pays": detail["country"],
+            "Convention": convention_id,
+            "Entreprise(s)": ", ".join(sorted(detail["companies"])) or "Non renseignée",
+        }
+        for convention_id, detail in sorted(nearby_conventions.items())
+    ]
+    st.subheader(
+        "Conventions et entreprises dans le rayon"
+        if radius_enabled
+        else "Conventions et entreprises des destinations localisées"
+    )
+    if convention_rows:
+        st.dataframe(
+            pd.DataFrame.from_records(convention_rows),
+            hide_index=True,
+            width="stretch",
+        )
+    else:
+        st.info(
+            (
+                f"Aucune destination localisée dans un rayon de {radius_km} km."
+                if radius_enabled
+                else "Aucune convention associée aux destinations localisées."
+            )
+        )
+
     st.subheader("Destinations localisées")
     try:
         import folium
@@ -1012,8 +1139,19 @@ def _render_geographic_analysis(data: pd.DataFrame) -> None:
         cluster = MarkerCluster(
             name="Destinations de stage (agrégées)"
         ).add_to(map_view)
+        if radius_enabled:
+            folium.Circle(
+                location=[SCHOOL_LATITUDE, SCHOOL_LONGITUDE],
+                radius=radius_km * 1000,
+                color="#2F6F9F",
+                weight=2,
+                fill=True,
+                fill_color="#75A9CB",
+                fill_opacity=0.12,
+                tooltip=f"Rayon de {radius_km} km à vol d’oiseau",
+            ).add_to(map_view)
         map_bounds = [[SCHOOL_LATITUDE, SCHOOL_LONGITUDE]]
-        for destination in destinations.itertuples(index=False):
+        for destination in nearby_destinations.itertuples(index=False):
             city = escape(str(destination.city))
             country = escape(str(destination.country or "Non renseigné"))
             companies = getattr(destination, "companies", [])
@@ -1066,7 +1204,11 @@ def _render_geographic_analysis(data: pd.DataFrame) -> None:
                 max_width=360,
             ),
         ).add_to(map_view)
-        map_view.fit_bounds(map_bounds, padding=(20, 20))
+        if nearby_destinations.empty:
+            map_view.location = [SCHOOL_LATITUDE, SCHOOL_LONGITUDE]
+            map_view.zoom_start = 10
+        else:
+            map_view.fit_bounds(map_bounds, padding=(20, 20))
         folium.LayerControl().add_to(map_view)
         st_folium(
             map_view,
