@@ -119,7 +119,7 @@ Le fichier `render.yaml` déploie le frontend et l’API dans un seul service we
 
 1. Poussez la branche `feature/react-fastapi-migration` sur GitHub.
 2. Dans Render, choisissez **New → Blueprint**, reliez le dépôt et sélectionnez cette branche.
-3. Vérifiez que le service `bi-femto-st` est configuré avec `BI_DATA_MODE=real`, puis lancez le déploiement.
-4. Après le déploiement, ouvrez l’URL `onrender.com` fournie par Render.
+3. Vérifiez que le service `supmicrotech-dashboard` est configuré avec `BI_DATA_MODE=real`, puis lancez le déploiement.
+4. Après le déploiement, ouvrez [supmicrotech-dashboard.onrender.com](https://supmicrotech-dashboard.onrender.com).
 
 Le Dockerfile construit React, puis FastAPI sert l’interface et l’API depuis la même origine. Le mode `real` lit ces deux fichiers sur le serveur ; Streamlit n’est pas utilisé par le service Render. L’offre gratuite Render peut mettre le service en veille après une période d’inactivité, ce qui ralentit la première requête suivante.

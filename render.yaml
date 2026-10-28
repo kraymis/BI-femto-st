@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bi-femto-st
+    name: supmicrotech-dashboard
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
